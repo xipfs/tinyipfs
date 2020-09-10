@@ -7,7 +7,7 @@ package tinyipfs;
  * @version 1.0 <br>
  * @date 2020/9/10 18:03 <br>
  */
-public class IPFS {
+public class TinyIpfs {
     public static void main(String[] args){
         System.out.println("tiny ipfs");
     }
