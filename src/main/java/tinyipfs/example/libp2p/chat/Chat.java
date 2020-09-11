@@ -1,8 +1,5 @@
 package tinyipfs.example.libp2p.chat;
 
-import io.libp2p.core.P2PChannelHandler;
-import org.jetbrains.annotations.NotNull;
-
 /**
  * description: Chat <br>
  *

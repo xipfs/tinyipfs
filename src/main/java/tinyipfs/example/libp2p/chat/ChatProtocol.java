@@ -4,14 +4,14 @@ import io.libp2p.core.Stream;
 import io.libp2p.protocol.ProtocolHandler;
 import io.libp2p.protocol.ProtocolMessageHandler;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.*;
-import java.util.function.Supplier;
+import java.nio.charset.Charset;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Logger;
 
 /**
@@ -23,104 +23,65 @@ import java.util.logging.Logger;
  */
 public class ChatProtocol extends ProtocolHandler<ChatController> {
     private static final Logger log = Logger.getLogger(ChatProtocol.class.getName());
+    private CompletableFuture<ChatController> completableFuture = new CompletableFuture<>();
+    private ChatHandler chatHandler = new ChatHandler(completableFuture);
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     @NotNull
     @Override
     public CompletableFuture<? extends ChatController> onStartInitiator(@NotNull Stream stream) {
-        log.info("remote peerId :"+stream.remotePeerId().toString());
-        ChatInitiator handler = new ChatInitiator();
-        stream.pushHandler(handler);
-        return handler.activeFuture;
+        log.info("onStartInitiator remote peerId :"+stream.remotePeerId().toString());
+        stream.pushHandler(chatHandler);
+        return completableFuture;
     }
 
     @NotNull
     @Override
     public CompletableFuture<? extends ChatController> onStartResponder(@NotNull Stream stream) {
-        ChatResponder handler = new ChatResponder();
-        stream.pushHandler(handler);
-        return CompletableFuture.completedFuture(handler);
+        log.info("onStartResponder remote peerId :"+stream.remotePeerId().toString());
+        stream.pushHandler(chatHandler);
+        return completableFuture;
     }
-    public class ChatResponder implements ProtocolMessageHandler<ByteBuf>, ChatController{
 
-        @Override
-        public CompletableFuture<String> chat(String msg) {
-            throw new ChatException();
+    public class ChatHandler implements ProtocolMessageHandler<ByteBuf>,ChatController{
+        CompletableFuture<ChatController> completableFuture;
+        private Stream stream;
+        public ChatHandler(CompletableFuture<ChatController> completableFuture){
+            this.completableFuture = completableFuture;
         }
-
         @Override
-        public void fireMessage(@NotNull Stream stream, @NotNull Object o) {
-
+        public void onMessage(@NotNull Stream stream, ByteBuf msg) {
+            String msgStr = msg.toString(Charset.defaultCharset());
+            log.info("ChatHandler onMessage, remote peerId :"+stream.remotePeerId().toString()+" , msg :"+msgStr);
         }
-
-        @Override
-        public void onActivated(@NotNull Stream stream) {
-
-        }
-
-        @Override
-        public void onClosed(@NotNull Stream stream) {
-
-        }
-
         @Override
         public void onException(@Nullable Throwable throwable) {
-
-        }
-
-        @Override
-        public void onMessage(@NotNull Stream stream, ByteBuf msg) {
-            stream.writeAndFlush(msg);
-        }
-    }
-    public class ChatInitiator implements ChatController, ProtocolMessageHandler<ByteBuf> {
-        CompletableFuture activeFuture = new CompletableFuture<ChatController>();
-        Map<String,Long> requests = Collections.synchronizedMap(new HashMap<>());
-        Stream stream;
-        boolean closed = false;
-
-        @Override
-        public void onActivated(@NotNull Stream stream) {
-            this.stream = stream;
-            activeFuture.complete(this);
-        }
-        @Override
-        public void onMessage(@NotNull Stream stream, ByteBuf msg) {
-            log.info("ChatInitiator onMessage");
+            log.info("ChatHandler onException");
         }
         @Override
         public void onClosed(@NotNull Stream stream) {
-            closed = true;
-            scheduler.shutdownNow();
+            log.info("ChatHandler onClosed");
+        }
+        @Override
+        public void onActivated(@NotNull Stream stream) {
+            log.info("ChatHandler onActivated");
+            this.stream = stream;
+            completableFuture.complete(this);
+        }
+        @Override
+        public void fireMessage(@NotNull Stream stream, @NotNull Object o) {
+            log.info("ChatHandler fireMessage "+o.getClass().getName());
+            onMessage(stream,(ByteBuf) o);
         }
 
         @Override
         public CompletableFuture<String> chat(String msg) {
-            if(closed) {
-                throw new ChatException();
-            }
-            CompletableFuture<String> ret = CompletableFuture.supplyAsync(new Supplier<String>() {
-                @Override
-                public String get() {
-                    try {
-                        TimeUnit.SECONDS.sleep(10);
-                    } catch (InterruptedException e) {
-                        throw new IllegalStateException(e);
-                    }
-                    return "Result of the asynchronous computation";
-                }
-            });
-            stream.writeAndFlush("hello");
+            log.info("send msg :"+msg);
+            CompletableFuture ret = new CompletableFuture<String>();
+            ByteBuf data = Unpooled.wrappedBuffer(msg.getBytes());
+            stream.writeAndFlush(data);
+            ret.complete("chat ok");
             return ret;
         }
-
-        @Override
-        public void fireMessage(@NotNull Stream stream, @NotNull Object o) {
-
-        }
-
-        @Override
-        public void onException(@Nullable Throwable throwable) {
-
-        }
     }
+
 }

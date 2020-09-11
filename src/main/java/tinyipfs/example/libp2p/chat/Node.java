@@ -1,6 +1,6 @@
 package tinyipfs.example.libp2p.chat;
 
-import io.libp2p.core.PeerId;
+import io.libp2p.core.PeerInfo;
 
 /**
  * description: Peer <br>
@@ -9,23 +9,23 @@ import io.libp2p.core.PeerId;
  * @version 1.0 <br>
  * @date 2020/9/10 16:14 <br>
  */
-public class Peer {
-    private PeerId peerId;
+public class Node {
+    private PeerInfo peerInfo;
     private ChatController chatController;
-    public Peer(){
+    public Node(){
 
     }
-    public Peer(PeerId peerId, ChatController chatController) {
-        this.peerId = peerId;
+    public Node(PeerInfo peerInfo, ChatController chatController) {
+        this.peerInfo = peerInfo;
         this.chatController = chatController;
     }
 
-    public PeerId getPeerId() {
-        return peerId;
+    public PeerInfo getPeerInfo() {
+        return peerInfo;
     }
 
-    public void setPeerId(PeerId peerId) {
-        this.peerId = peerId;
+    public void setPeerInfo(PeerInfo peerInfo) {
+        this.peerInfo = peerInfo;
     }
 
     public ChatController getChatController() {

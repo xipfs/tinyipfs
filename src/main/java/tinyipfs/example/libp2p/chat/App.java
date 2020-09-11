@@ -1,8 +1,6 @@
 package tinyipfs.example.libp2p.chat;
 
 import io.libp2p.core.multiformats.Multiaddr;
-import io.libp2p.protocol.Ping;
-import io.libp2p.protocol.PingController;
 
 import java.util.Scanner;
 
@@ -33,8 +31,9 @@ public class App {
 
             System.out.println("Sending 5 ping messages to " + address.toString());
             for (int i = 1; i <= count; ++i) {
-                String latency = chatter.chat("hello").get();
-                System.out.println("chat " + i + ", chat " + latency + "ms");
+                String resp = chatter.chat("hello").get();
+                System.out.println("time: " + i + ", resp:  "+resp);
+                Thread.sleep(10000);
             }
         }
 
